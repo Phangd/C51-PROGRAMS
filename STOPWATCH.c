@@ -50,8 +50,8 @@ void timer0_define(void){
 	EA=0;
 	TR0=0;
 	TMOD=0x01;
-	TL0=0x77;
-	TH0=0xEC;
+	TL0=0x00;
+	TH0=0xEE;
 	
 	PT0=1;
 	ET0=1;
@@ -60,6 +60,9 @@ void timer0_define(void){
 }
 
 void timer0_main(void) interrupt 1 {
+	TL0=0x00;
+	TH0=0xEE;
+	
 	num++;
 	micronum++;
 	
@@ -81,8 +84,7 @@ void timer0_main(void) interrupt 1 {
 		num=0;
 		P1=(P1>>1)|0x80;
 		if(P1==0xFF) P1=0x7F;
-	}	
-	timer0_define();
+	}
 }
 
 void main(void){
