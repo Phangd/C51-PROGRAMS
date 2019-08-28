@@ -5,11 +5,9 @@
 sbit stop = P3^2;
 sbit reset = P3^3;
 
-int second=5;
-int microsecond=100;
-int flag= 1000;
+int second=6;
+int microsecond=0;
 int num,micronum;
-uchar j = 0;
 
 code unsigned char digsel[4]={0xFE,0xFD,0xFB,0xF7};
 code unsigned char digdis[]={0xc0,0xf9,0xA4,0xB0,0x99,0x92,0x82,0xf8,0x80,0x90};
@@ -25,14 +23,17 @@ void dig_show(void){
 	P2 = 0xFF;
 	P0 = digdis[second/10];
 	P2 = digsel[0];
+	
 	delay(10);
 	P2 = 0xFF;
-	P0 = digdis[second%10];
+	P0 = digdis_dot[second%10];
 	P2 = digsel[1];
+	
 	delay(10);
 	P2 = 0xFF;
 	P0 = digdis[microsecond/10];
 	P2 = digsel[2];
+	
 	delay(10);
 	P2 = 0xFF;
 	P0 = digdis[microsecond%10];
@@ -55,29 +56,29 @@ void timer0_define(void){
 	
 	PT0=1;
 	ET0=1;
-	TR0=1;
+	//TR0=1;				//按开始键才开定时器
 	EA=1;
 }
 
-void timer0_main(void) interrupt 1 {
-	TL0=0x00;
+void timer0_main(void) interrupt 1 using 0{
+	TL0=0x00;				//5ms
 	TH0=0xEE;
 	
-	num++;
-	micronum++;
+	num++;					//LED灯
+	micronum++;				//微秒标志数
 	
-	if(micronum%2==0&&second!=0){
-		microsecond--;
+	if(micronum>=2){
+		micronum=0;
+		if(microsecond!=0) microsecond--;
 		if(microsecond==0) {
-			second--;
 			microsecond=100;
+			second--;
 		}
-		if(second == 0) second=0;
-	}
-	
-	if(micronum>=flag&&micronum<(flag+100)){
-		if(microsecond==0) microsecond=100;
-		microsecond--;
+		if(second < 0){
+			second=0;
+			microsecond=0;
+			TR0=0;
+		}
 	}
 
 	if(num==200){
@@ -95,16 +96,17 @@ void main(void){
 		if(stop == 0){
 			delay(20);
 			if(stop == 0){
-				TR0=!TR0;
+				if(second>0||microsecond!=0) TR0=!TR0;
 				while(!stop);
 			}
 		}
 		if(reset == 0){
 			delay(20);
 			if(reset == 0){
-				second=5;
-				microsecond=100;
+				second=6;
+				microsecond=0;
 				micronum=0;
+				TR0=0;
 				while(!reset);
 			}
 		}
