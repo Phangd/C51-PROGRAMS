@@ -56,16 +56,16 @@ void timer0_define(void){
 	
 	PT0=1;
 	ET0=1;
-	//TR0=1;				//按开始键才开定时器
+	//TR0=1;			//按开始键才开定时器
 	EA=1;
 }
 
 void timer0_main(void) interrupt 1 using 0{
-	TL0=0x00;				//5ms
+	TL0=0x00;			//5ms
 	TH0=0xEE;
 	
-	num++;					//LED灯
-	micronum++;				//微秒标志数
+	num++;				//LED灯
+	micronum++;			//微秒标志数
 	
 	if(micronum>=2){
 		micronum=0;
