@@ -29,7 +29,7 @@ void init_timer(){
 	TL0  = 0x00;
 	
 	EA   = 1;
-	ET0	 = 1;
+	ET0  = 1;
 	TR0  = 1;
 }
 
