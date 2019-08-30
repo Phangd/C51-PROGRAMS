@@ -53,7 +53,7 @@ void digshow(){
 	delay(5);
 	
 	P2 = 0x71;
-	P0 = num[n1];
+	P0 = num[n1];	
 	delay(5);
 	
 	P2 = 0x72;
