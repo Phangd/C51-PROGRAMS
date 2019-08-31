@@ -111,7 +111,7 @@ void scankey(){
 
 
 void main(){
-	//init_timer();
+	//init_timer();	
 	P3 = 0xFF;
 	while(1){
 		scankey();
