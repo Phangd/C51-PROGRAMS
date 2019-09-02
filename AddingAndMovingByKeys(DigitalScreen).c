@@ -35,8 +35,8 @@ void scankey(){
 			keyflag = 1;
 		}
 	}
-	else{
-		judtime = 0;
+	else{						//松手后再处理
+		judtime = 0;				//不管是否按下都清掉按键持续时间
 		if(keyflag == 1){
 			keyflag = 0;
 			switch(oldkeyvalue){
