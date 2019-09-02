@@ -82,8 +82,8 @@ void scankey(){
 			temp_code=temp;
 		}
 	}
-	else{
-		num_check=0;
+	else{				//松手后再处理
+		num_check=0;		//不管是否按下都清掉按键持续时间
 		if(key_flag==1){
 			key_flag=0;
 			switch(temp_code){
