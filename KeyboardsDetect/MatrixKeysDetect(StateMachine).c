@@ -1,6 +1,7 @@
 #include <reg52.h>
 #define uchar unsigned char
 #define uint  unsigned int
+
 #define key P3
 #define no_key 0xff
 #define key_state0 0
@@ -24,13 +25,13 @@ void scankey(){
 	uchar key1,key2;
 	
 	key = 0xf0;
-	key1 = key;
-	key1 = key&0xf0;
+	key1 = key;	//高四位为行标志,有键按下则相应行的I/O口变为0
+	key1 = key&0xf0; //清掉低四位只保留高四位,值保存在key1中
 	key = 0x0f;
-	key2 = key;
-	key2 = key&0x0f;
-	key_temp = key1|key2;
-	
+	key2 = key;	//低四位为行标志,有键按下则相应行的I/O口变为0
+	key2 = key&0x0f; //清掉高四位只保留低四位,值保存在key2中	
+	key_temp = key1|key2;	//无键按下则为0xff,有键按下的会有类似(1101 1011)的值
+																  key1 key2
 	switch(key_state){
 		case key_state0:
 			if(key_temp != no_key){
