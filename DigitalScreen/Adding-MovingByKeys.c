@@ -60,7 +60,7 @@ void scankey(){
 		}
 	}
 }
-
+	
 void main(){
 	while(1){
 		scankey();
