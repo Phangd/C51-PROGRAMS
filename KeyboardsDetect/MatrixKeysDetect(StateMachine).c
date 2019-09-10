@@ -85,7 +85,7 @@ void init_timer(){
 	TR0  = 1;
 }
 
-void timer0() interrupt 1 using 0{		//定时器按键扫描法
+void timer0() interrupt 1 using 0{		
 	TH0  = 0XDC;						//10ms
 	TL0  = 0X00;
 	flag = 1;
