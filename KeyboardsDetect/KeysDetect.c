@@ -25,7 +25,7 @@ sbit key2 = P3^3;
 	// TR0  = 1;
 // }
 
-// void timer0() interrupt 1 using 0{		//定时器按键扫描法
+// void timer0() interrupt 1 using 0{
 	// if(key1 == 0){
 		// delay(2);
 		// if(key1 == 0){
