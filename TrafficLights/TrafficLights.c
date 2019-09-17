@@ -2,19 +2,19 @@
 #define uchar unsigned char
 #define uint  unsigned int
 
-sbit redew 	  = P0^0;
+sbit redew    = P0^0;
 sbit yellowew = P0^1;
 sbit greenew  = P0^2;
-sbit redns 	  = P0^3;
+sbit redns    = P0^3;
 sbit yellowns = P0^4;
 sbit greenns  = P0^5;
-sbit nsduan	  = P3^0;
+sbit nsduan   = P3^0;
 sbit nswei    = P3^1;
 
 code unsigned char num[]={0xc0,0xf9,0xA4,0xB0,0x99,0x92,0x82,0xf8,0x80,0x90};
 code unsigned char seg[]={0xaa,0x55,0x44,0x88};
 uchar flag;
-uchar seconds   = 30;
+uchar seconds = 30;
 
 void delay(uchar x){
 	uchar i,j;
