@@ -20,7 +20,7 @@ void delay(uchar k){
 }
 
 void scankey(){
-	uchar key_state;
+	static char key_state;
 	uchar key_temp;
 	uchar key1,key2;
 	
@@ -61,8 +61,8 @@ void scankey(){
 					case 0x7b: key_value = 14;break;
 					case 0x77: key_value = 15;break;
 				}
+				key_state = key_state2;
 			}
-			key_state = key_state2;
 		break;
 		case key_state2:
 			if(key_temp == no_key){
