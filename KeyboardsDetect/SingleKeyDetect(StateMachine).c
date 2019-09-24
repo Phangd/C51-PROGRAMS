@@ -103,12 +103,8 @@ void display(){
 
 void main(){
 	timer_init();
-	while(1){
-		
-			
+	while(1){	
 		key_handle();
-		
-		
 		display();
 	}
 }
