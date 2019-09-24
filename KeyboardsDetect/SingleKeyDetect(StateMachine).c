@@ -12,7 +12,6 @@ sbit key_s2 = P3^3;
 sbit key_s3 = P3^4;
 
 uchar seconds,flag;
-uchar key_return;
 
 code uchar num[]={0xc0,0xF9,0xA4,0xB0,0x99,0x92,0x82,0xF8,0x80,0x90};
 code uchar seg[]={0xFE,0xFD,0xFB,0xF7};
@@ -49,8 +48,7 @@ void timer0() interrupt 1 using 0{
 }
 
 void key_handle(){
-	static char key_state;
-	uchar key_temp;
+	static char key_state;				//此处一定要用static定义,或定义到全局变量中
 	uchar key_press;
 	uchar key_press1;
 	uchar key_press2;
