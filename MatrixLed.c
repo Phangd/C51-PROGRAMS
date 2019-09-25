@@ -13,11 +13,10 @@ code uchar charcode[4][8]={
 
 uchar i,j,flag;
 
-void Key_down()interrupt 0{
+void Key_down()interrupt 0{			
 	P0 = 0xff;
 	P1 = 0x80;
-	j = 0;
-	TR0 = 1;
+	TR0 = 1;						
 }
 
 void timer0()interrupt 1{
@@ -35,13 +34,14 @@ void timer0()interrupt 1{
 }
 
 void main(){
-	P0 = 0xff;
-	P1 = 0x80;
 	TMOD = 0x01;
 	TH0 = (65536-2000)/256;
 	TL0 = (65536-2000)%256;
 	IT0 = 1;
 	IE  = 0x83;
 	i = 0;
+	j = 0;
+	P0 = 0xff;
+	P1 = 0x80;
 	while(1);
 }
