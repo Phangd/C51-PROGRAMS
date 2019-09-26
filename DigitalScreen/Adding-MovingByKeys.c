@@ -1,18 +1,18 @@
 #include <reg52.h>
-#define uchar unsigned char
-#define uint  unsigned int
+#typedef unsigned char uint8;
+#typedef unsigned int uint16;
 
-code uchar num[]={0xc0,0xf9,0xA4,0xB0,0x99,0x92,0x82,0xf8,0x80,0x90};
-code uchar seg[]={0xFE,0xFD,0xFB,0xF7};
+code uint8 num[]={0xc0,0xf9,0xA4,0xB0,0x99,0x92,0x82,0xf8,0x80,0x90};
+code uint8 seg[]={0xFE,0xFD,0xFB,0xF7};
 
 sbit segadd = P3^2;
 sbit segsub = P3^3;
 sbit numadd = P3^4;
 sbit numsub = P3^5;
 
-uchar position,number;
+uint8 position,number;
 
-void delay(uchar k){
+void delay(uint8 k){
 	uchar i,j;
 	for(i=k;i>0;i--)
 		for(j=110;j>0;j--);
@@ -26,7 +26,7 @@ void display(){
 }
 
 void scankey(){
-	uchar temp,judtime,keyflag,oldkeyvalue;
+	uint8 temp,judtime,keyflag,oldkeyvalue;
 	temp = P3&0xff;
 	if(temp!=0xff){
 		judtime++;
