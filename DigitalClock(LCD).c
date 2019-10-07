@@ -1,6 +1,6 @@
 #include<reg52.h>
-#define uint unsigned int
-#define uchar unsigned char
+typedef unsigned int uint16;
+typedef unsigned char uint8;
 
 sbit key1 = P3^2 ;		//键盘
 
@@ -12,14 +12,14 @@ sbit key_min = P3^3;
 sbit key_add = P3^4;
 sbit key_sub = P3^5;
 
-uint second = 51;
-uint minute = 59;
-uint hour 	= 23;
-uint year 	= 19;
-uint month 	= 6;
-uint day 	= 20;
-uchar flag  = 0;
-uchar mode  = 0;
+uint16 second	= 51;
+uint16 minute 	= 59;
+uint16 hour	= 23;
+uint16 year 	= 19;
+uint16 month 	= 6;
+uint16 day 	= 20;
+uint8 flag 	= 0;
+uint8 mode 	= 0;
 
 void delay();
 void delayhalf();
@@ -37,7 +37,7 @@ void timeshow();
 void lcdinitshow();
 
 void delay(){						//延时1s
-	unsigned char i,j,k;
+	uint8 i,j,k;
 	for(i=26;i>0;i--){
 		for(j=202;j>0;j--){
 			for(k=81;k>0;k--){;}
@@ -46,7 +46,7 @@ void delay(){						//延时1s
 }
 
 void delayhalf(){					//延时0.5s
-	unsigned char i,j,k;
+	uint8 i,j,k;
 	for(i=13;i>0;i--){
 		for(j=202;j>0;j--){
 			for(k=81;k>0;k--){;}
@@ -54,14 +54,14 @@ void delayhalf(){					//延时0.5s
 	}
 }
 
-void shortdelay(uint n){			//短延时
-	uint i,j;
+void shortdelay(uint16 n){			//短延时
+	uint16 i,j;
 	for(i=n;i>0;i--){
 		for(j=110;j>0;j--){;}
 	}
 }
 
-void lcd_wcom(uchar com){		
+void lcd_wcom(uint8 com){		
 	lcdrs = 0;						//写命令模式
 	lcdrw = 0;						//写入到LCD屏幕
 	P0 = com;
@@ -71,7 +71,7 @@ void lcd_wcom(uchar com){
 	lcden = 0;
 }
 
-void lcd_wdat(uchar dat){		
+void lcd_wdat(uint8 dat){		
 	lcdrs = 1;						//写数据模式
 	lcdrw = 0;						//写入到LCD屏幕
 	P0 = dat;
@@ -89,8 +89,8 @@ void lcd_init(){					//初始化LCD
 	lcd_wcom(0x80);					//设置数据指针起点
 }
 
-void timeshow(uchar add,uchar time){
-	uchar i,j;
+void timeshow(uint8 add,uint8 time){
+	uint8 i,j;
 	i = time/10;					//取时间的十位
 	j = time%10;					//取时间的个位
 	lcd_wcom(0x80+add);				//第1排第add个位置
@@ -98,8 +98,8 @@ void timeshow(uchar add,uchar time){
 	lcd_wdat(0x30+j);				//显示数字，0x32是2，0x33是3...
 }
 
-void dateshow(uchar add,uchar date){
-	uchar x,y;
+void dateshow(uint8 add,uint8 date){
+	uint8 x,y;
 	x = date/10;
 	y = date%10;
 	lcd_wcom(0xC0+add);				//第2排第add个位置
@@ -170,7 +170,7 @@ void init_ser(void) interrupt 1		//定时器0中断服务函数
 }
 
 void keyscan(void){
-	uchar i,j,k,m;
+	uint8 i,j,k,m;
 	if(key_mode == 0){
 		shortdelay(50);
 		if(key_mode == 0){
@@ -455,12 +455,10 @@ void lcdinitshow(void){
 }
 
 void main(){
-	uchar i = 0;
+	uint8 i = 0;
 	init_int();
 	lcdinitshow();
-	
 	while(1) {
 		keyscan();
 	}
-	
 }
