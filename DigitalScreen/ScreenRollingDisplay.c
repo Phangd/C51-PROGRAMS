@@ -1,12 +1,12 @@
 #include <reg52.h>
-#define uchar unsigned char
-#define uint  unsigned int
+typedef unsigned char uint8;
+typedef unsigned int uint16;
 
-code unsigned char num[]={0xc0,0xf9,0xA4,0xB0,0x99,0x92,0x82,0xf8,0x80,0x90};
-uchar n0=0,n1=1,n2=2,n3=3,n4=4,n5=5,n6=6;
-uchar flag;
-void delay(int x){
-	int i,j;
+code uint8 num[]={0xc0,0xf9,0xA4,0xB0,0x99,0x92,0x82,0xf8,0x80,0x90};
+uint8 n0=0,n1=1,n2=2,n3=3,n4=4,n5=5,n6=6;
+uint8 flag;
+void delay(uint16 x){
+	uint8 i,j;
 	for(i=x;i>0;i--)
 		for(j=110;j>0;j--);
 }
@@ -19,7 +19,7 @@ void init_timer(){
 	TL0  = 0x00;
 	
 	EA   = 1;
-	ET0	 = 1;
+	ET0  = 1;
 	TR0  = 1;
 }
 
@@ -47,7 +47,6 @@ void timer0_serive() interrupt 1 using 0{
 }
 
 void digshow(){
-	//uchar i,j;
 	P2 = 0x70;
 	P0 = num[n0];
 	delay(5);
