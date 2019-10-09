@@ -2,7 +2,6 @@
 typedef unsigned char uint8;
 typedef unsigned int uint16;
 
-code uint8 char1[]="--Hello World!-- --Hello World!--";
 code uint8 char2[]="Https://github.com/Phangd";
 sbit lcdrw = P3^6;
 sbit lcdrs = P2^6;
@@ -32,6 +31,13 @@ void wdat(uint8 dat){
 	lcden = 0;
 }
 
+void wchar(uint8 *char1){				//写字符串
+	while(*char1){
+		wdat(*char1);
+		char1++;
+	}
+}
+
 void lcd_init(){
 	wcom(0x38);
 	wcom(0x01);
@@ -40,30 +46,21 @@ void lcd_init(){
 }
 
 void main(){
-	uint8 num;
+	uint8 i=0,j=0,n=0; 
 	lcd_init();
 	delay(5);
 	wcom(0x80);
+	wchar("--Hello World!--");
 	while(1){
-		while(char1[num] != '\0'){
-			wdat(char1[num]);
-			num++;
+		wcom(0x80+0x40);
+		for(j=n;j<40+n;j++){			//将指针开头不断累加，但循环次数始终为40次
+			wdat(char2[j]);				//指针累加后下一次显示的内容则为前一次的内容往前移了一位
 		}
-		num = 0;
-		while(char2[num] != '\0'){
-			wcom(0x80+0x40+num);
-			wdat(char2[num]);
-			num++;
-			delay(200);
-			if(num >= 15){
-				wcom(0x18);
-				delay(300);
-			}
+		n++;
+		if(n>9){						//多出的字数显示完毕后，将指针开头置回第0位
+			n=0;
+			delay(500);					//显示完所有内容后停留一秒钟
 		}
-		if(num >= 25){
-			delay(1000);
-			wcom(0x01);
-			num = 0;
-		}
+		delay(500);						//移位间隔
 	}
 }
