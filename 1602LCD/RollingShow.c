@@ -2,7 +2,7 @@
 typedef unsigned char uint8;
 typedef unsigned int uint16;
 
-code uint8 char2[]="Https://github.com/Phangd";
+code uint8 char0[]="Https://github.com/Phangd";
 sbit lcdrw = P3^6;
 sbit lcdrs = P2^6;
 sbit lcden = P2^7;
@@ -54,7 +54,7 @@ void main(){
 	while(1){
 		wcom(0x80+0x40);
 		for(i=j;i<40+j;i++){			//将指针开头不断累加，但循环次数始终为40次
-			wdat(char2[i]);				//指针累加后下一次显示的内容则为前一次的内容往前移了一位
+			wdat(char0[i]);				//指针累加后下一次显示的内容则为前一次的内容往前移了一位
 		}
 		j++;
 		if(j>9){						//多出的字数显示完毕后，将指针开头置回第0位
