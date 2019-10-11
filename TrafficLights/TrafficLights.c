@@ -1,6 +1,6 @@
 #include <reg52.h>
-#define uchar unsigned char
-#define uint  unsigned int
+typedef unsigned char uint8;
+typedef unsigned int uint16;
 
 sbit redew    = P0^0;
 sbit yellowew = P0^1;
@@ -11,13 +11,13 @@ sbit greenns  = P0^5;
 sbit nsduan   = P3^0;
 sbit nswei    = P3^1;
 
-code unsigned char num[]={0xc0,0xf9,0xA4,0xB0,0x99,0x92,0x82,0xf8,0x80,0x90};
-code unsigned char seg[]={0xaa,0x55,0x44,0x88};
-uchar flag;
-uchar seconds = 30;
+code uint8 num[]={0xc0,0xf9,0xA4,0xB0,0x99,0x92,0x82,0xf8,0x80,0x90};
+code uint8 seg[]={0xaa,0x55,0x44,0x88};
+uint8 flag;
+uint8 seconds = 30;
 
-void delay(uchar x){
-	uchar i,j;
+void delay(uint8 x){
+	uint8 i,j;
 	for(i=x;i>0;i--)
 		for(j=110;j>0;j--);
 }
@@ -45,7 +45,7 @@ void timer0_serive() interrupt 1 using 0{
 }
 
 void timeshow(){
-	uchar redshi,redge,yelloshi,yelloge,greenshi,greenge,yelloshi1,yelloge1;
+	uint8 redshi,redge,yelloshi,yelloge,greenshi,greenge,yelloshi1,yelloge1;
 	redshi 	  = (seconds-20)/10;
 	redge  	  = (seconds-20)%10;
 	yelloshi  = (seconds-16)/10;
