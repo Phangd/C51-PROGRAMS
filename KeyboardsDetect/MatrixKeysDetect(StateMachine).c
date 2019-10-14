@@ -1,6 +1,6 @@
 #include <reg52.h>
-#define uchar unsigned char
-#define uint  unsigned int
+typedef unsigned char uint8;
+typedef unsigned int uint16;
 
 #define key P3
 #define no_key 0xff
@@ -10,19 +10,19 @@
 
 code uchar num[]={0xc0,0xF9,0xA4,0xB0,0x99,0x92,0x82,0xF8,0x80,0x90,0x88,0x83,0xC6,0xA1,0x86,0x8E};
 
-uchar key_value;
+uint8 key_value;
 bit flag;
 
-void delay(uchar k){
-	uchar i,j;
+void delay(uint8 k){
+	uint8 i,j;
 	for(i=k;i>0;i--)
 		for(j=110;j>0;j--);
 }
 
 void scankey(){
 	static char key_state;
-	uchar key_temp;
-	uchar key1,key2;
+	uint8 key_temp;
+	uint8 key1,key2;
 	
 	key = 0xf0;
 	key1 = key;		//高四位为行标志,有键按下则相应行的I/O口变为0
