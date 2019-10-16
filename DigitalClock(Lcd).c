@@ -61,12 +61,12 @@ void timer_init(){
 	TR0 = 0;
 	TR1 = 0;
 	TMOD = 0x11;
-	TH0 = 0x4C;		//50ms
+	TH0 = 0x4C;				//50ms
 	TL0 = 0x00;
 	TH1 = 0x4C;
 	TL1 = 0x00;
 	
-	ET0 = 1;		//允许Timer0中断
+	ET0 = 1;				//允许Timer0中断
 	ET1 = 1;
 	EA  = 1;
 	TR0 = 1;
@@ -74,7 +74,7 @@ void timer_init(){
 }
 
 void isr_timer0 () interrupt 1 using 0 {
-	TH0 = 0x4C;		//50ms
+	TH0 = 0x4C;				//50ms
 	TL0 = 0x00;
 	keyscan();
 	if(++time_400ms >= 8){
