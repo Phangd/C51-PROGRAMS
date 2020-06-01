@@ -1,464 +1,505 @@
-#include<reg52.h>
-typedef unsigned int uint16;
+/**************************************************************************************
+*		              LCD1602电子时钟												  *
+实现现象：下载程序后,LCD屏上第一行会显示出日期,第二行显示时间和当前温度。按下K1,进入时间调节
+		 模式,按下K2让光标往左移,按下K3让光标处的数字增1,按下K4让光标处的数字减1
+注意事项：																				  
+***************************************************************************************/
+//--头文件声明,数据类型声明--//
+#include <reg52.h>
+#include <intrins.h>
 typedef unsigned char uint8;
+typedef unsigned int uint16;
 
-sbit key1 = P3^2 ;		//键盘
+#define key P3
+#define no_key 0xff					//无按键按下
+#define key_state0 0				//状态定义
+#define key_state1 1
+#define key_state2 2
+//---------端口声明---------//
+sbit lcden = P2^7;
+sbit lcdrs = P2^6;
+sbit lcdrw = P3^6;
 
-sbit lcden = P2^7;		//LCD使能
-sbit lcdrs = P2^6;		//LCD数据/命令选择引脚
-sbit lcdrw = P3^6;		//LCD读写命令选择
-sbit key_mode = P3^2;		//切换时间/调整模式
-sbit key_min = P3^3;
-sbit key_add = P3^4;
-sbit key_sub = P3^5;
+sbit key1  = P3^2;
+sbit key2  = P3^3;
+sbit key3  = P3^4;
+sbit key4  = P3^5;
 
-uint16 second	= 51;
-uint16 minute 	= 59;
-uint16 hour	= 23;
-uint16 year 	= 19;
-uint16 month 	= 6;
-uint16 day 	= 20;
-uint8 flag 	= 0;
-uint8 mode 	= 0;
+sbit dq    = P3^7;					//DS18B20数据线
+//---------函数声明---------//
+void lcd_init();					//LCD屏幕初始化
+void wcom();						//LCD写命令
+void wdat();						//LCD写数据
+void display();						//显示函数
+void timeshow();					//时间显示
+void dateshow();					//日期显示
+void weekshow();					//星期显示
+void keyscan();						//按键扫描
+void key_disposal();				//键值处理
+void day_jud();						//日期处理
+void ds18b20_init();				//18B20模块初始化
+uint8 byte_read();					//读去18B20一个字节
+void byte_write();					//写入18B20一个字节
+void temp_read();					//温度读取函数
+void temp_display(uint8 position,uint16 tvalue1);		//温度显示函数
+//---------变量定义---------//
+uint8 time_1s,time_500ms;
+uint8 second,minute = 59,hour = 23;
+uint8 day = 1,month = 1,week = 1;			//设定初始
+uint16 year = 2019,tvalue;
+uint8 temp;
+uint8 cursor;
+uint8 key_value;
+bit f_twinkle,f_mode,f_pressing,f_set;
 
-void delay();
-void delayhalf();
-void shortdelay();
-void lcd_wcom();
-void lcd_init();
-void lcd_wdat();
+uint8 code table1[]={0x10,0x06,0x09,0x08,0x08,0x09,0x06,0x00};			//字符℃
+uint8 code table2[]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xff};			//字符__ 用来实现伪光标效果
 
-void init_int();
-void init_ser();
-void waibu_ser();
-
-void keyscan();
-void timeshow();
-void lcdinitshow();
-
-void delay(){						//延时1s
-	uint8 i,j,k;
-	for(i=26;i>0;i--){
-		for(j=202;j>0;j--){
-			for(k=81;k>0;k--){;}
-		}
-	}
-}
-
-void delayhalf(){					//延时0.5s
-	uint8 i,j,k;
-	for(i=13;i>0;i--){
-		for(j=202;j>0;j--){
-			for(k=81;k>0;k--){;}
-		}
-	}
-}
-
-void shortdelay(uint16 n){			//短延时
+//---------长延时---------//
+void delay(uint16 k){
 	uint16 i,j;
-	for(i=n;i>0;i--){
-		for(j=110;j>0;j--){;}
-	}
+	for(i=k;i>0;i--)
+		for(j=110;j>0;j--);
 }
 
-void lcd_wcom(uint8 com){		
-	lcdrs = 0;						//写命令模式
-	lcdrw = 0;						//写入到LCD屏幕
-	P0 = com;
-	shortdelay(5);
-	lcden = 1;
-	shortdelay(5);
-	lcden = 0;
+//---------短延时---------//
+void delayus(uint8 time_1us){
+	while(time_1us--);
 }
 
-void lcd_wdat(uint8 dat){		
-	lcdrs = 1;						//写数据模式
-	lcdrw = 0;						//写入到LCD屏幕
-	P0 = dat;
-	shortdelay(5);
-	lcden = 1;
-	shortdelay(5);
-	lcden = 0;
-}
-
-void lcd_init(){					//初始化LCD
-	lcd_wcom(0x01);					//清屏
-	lcd_wcom(0x38);					//四位数据，两行显示，5*7
-	lcd_wcom(0x0C);					//无光标，打开显示
-	lcd_wcom(0x06);					//光标右移，屏幕不移动
-	lcd_wcom(0x80);					//设置数据指针起点
-}
-
-void timeshow(uint8 add,uint8 time){
-	uint8 i,j;
-	i = time/10;					//取时间的十位
-	j = time%10;					//取时间的个位
-	lcd_wcom(0x80+add);				//第1排第add个位置
-	lcd_wdat(0x30+i);				//显示数字，0x30是0，0x31是1
-	lcd_wdat(0x30+j);				//显示数字，0x32是2，0x33是3...
-}
-
-void dateshow(uint8 add,uint8 date){
-	uint8 x,y;
-	x = date/10;
-	y = date%10;
-	lcd_wcom(0xC0+add);				//第2排第add个位置
-	lcd_wdat(0x30+x);				//显示数字，0x30是0，0x31是1
-	lcd_wdat(0x30+y);				//显示数字，0x32是2，0x33是3...
-}
-
-
-void init_int(void){				//初始化定时器中断0和外部中断0
-	EA 	 = 0;
-	TR0  = 0;
+//---------定时器初始化---------//
+void timer_init(){
+	EA = 0;
+	TR0 = 0;
 	TMOD = 0x01;
-	
-	
-	EA 	= 1;
-	PT0 = 1;
-	ET0 = 1;						//允许定时器中断 优先级第3
-	// EX0 = 1;						//允许外部中断0中断，优先级第1
-	// IT1 = 1;
+	TH0 = 0x4C;		//50ms
+	TL0 = 0x00;
+
+	ET0 = 1;		//允许Timer0中断
+	ET1 = 1;
+	EA  = 1;
 	TR0 = 1;
 }
 
-void init_ser(void) interrupt 1		//定时器0中断服务函数
-{	
-	TL0  = 0x00;
-	TH0  = 0xEE;					//5ms溢出一次
-	flag++;
-	if(flag == 200){
-		flag = 0;
-		second++;
-		if(second == 60){
-			second = 0;
-			minute++;
-			if(minute == 60){
-				minute = 0;
-				hour++;
-				if(hour == 24){
-					hour = 0;
-					day++;
-					if(day == 32 && (month == 1 || month == 3 || month == 5 || month == 7 || month == 8 || month == 10 || month ==12)){
-						day = 1;
-						month++;
-						if(month > 12){
-							month = 1;
-							year++;
-						}
-					}
-					if(day == 31 && (month == 4 || month == 6 || month == 9 || month == 11)){
-						day = 1;
-						month++;
-					}
-					if(day == 29 && month ==2 && (year%4 != 0)){
-						day = 1;
-						month++;
-					}
-					if(day == 29 && month ==2 && year%100 == 0 && year%400 != 0){
-						day = 1;
-						month++;
-					}
-					if(day == 30 && month ==2 && ((year%100 == 0 && year%400 == 0)|| (year%100 != 0 && year%4 == 0))){
-						day = 1;
-						month++;
-					}
-				}
-			} 
+//---------Timer0中断服务函数---------//
+void isr_timer0 () interrupt 1 using 0 {
+	TH0 = 0x4C;		//50ms
+	TL0 = 0x00;
+	keyscan();
+	if(++time_500ms >= 10){
+		time_500ms = 0;
+		f_twinkle = ~f_twinkle;
+	}
+	if(!f_set){
+		if(++time_1s >= 20){
+			time_1s = 0;
+			second++;
 		}
 	}
 }
 
-void keyscan(void){
-	uint8 i,j,k,m;
-	if(key_mode == 0){
-		shortdelay(50);
-		if(key_mode == 0){
-			i = 0;
-			j = 0;
-			k = 0;
-			m = 0;
-			mode++;
-			while(!key_mode);
-		}
-		if(mode > 1) mode = 0;
-	}
+void ds18b20_init(){						//ds18b20初始化
+	dq = 1;	
+	_nop_();
+	dq = 0;
+	delayus(75);
+	dq = 1;
+	delayus(20);
+	dq = 1;
+	_nop_();
+}
+
+void wcom(uint8 com){						//LCD1602写命令
+	lcdrw = 0;
+	lcdrs = 0;
+	P0 = com;
+	lcden = 1;
+	delay(5);
+	lcden = 0;
+}
+
+void wdat(uint8 dat){						//LCD1602写数据
+	lcdrw = 0;
+	lcdrs = 1;
+	P0 = dat;
+	lcden = 1;
+	delay(5);
+	lcden = 0;	
+}
+
+void lcd_init(){							//LCD初始化
+	wcom(0x38);
+	wcom(0x01);
+	wcom(0x06);
+	wcom(0x0c);
 	
-	if(mode == 0){
-		TR0 = 1;
-		lcd_wcom(0x0C);
-		timeshow(6,hour);
-		timeshow(9,minute);
-		timeshow(0x0C,second);
-		dateshow(6,year);
-		dateshow(9,month);
-		dateshow(0x0C,day);
+	wcom(0x86);
+	wdat(0x2d);								//"-"
+	wcom(0x89);
+	wdat(0x2d);								//"-"
+	wcom(0x80+0x40+0x04);
+	wdat(0x3a);								//":"
+	wcom(0x80+0x40+0x07);
+	wdat(0x3a);								//":"
+}
+
+void timeshow(uint8 position,uint8 time){		//时间显示,position为显示位置
+	uint8 i,j;
+	i = time/10;				//shiwei
+	j = time%10;				//gewei
+	wcom(0x80+0x40+position);
+	wdat(0x30+i);				//shiwei
+	wdat(0x30+j);				//gewei
+}
+
+void dateshow(uint8 position,uint8 date1){		//日期显示(月、日)
+	uint8 i,j;
+	i = date1/10;				//shiwei
+	j = date1%10;				//gewei
+	wcom(0x80+position);
+	wdat(0x30+i);				//shiwei
+	wdat(0x30+j);				//gewei
+}
+
+void yearshow(uint8 position,uint16 year1){		//年份显示
+	uint8 i,j,m,n;
+	i = year1/1000;				//qianwei
+	j = year1/100%10;			//baiwei
+	m = year1/10%10;
+	n = year1%10;
+	wcom(0x80+position);
+	wdat(0x30+i);				//qianwei
+	wdat(0x30+j);				//baiwei
+	wdat(0x30+m);				//shiwei
+	wdat(0x30+n);				//gewei
+}
+
+void weekshow(uint8 position,uint8 week1){		//星期显示
+	wcom(0x80+position);
+	switch(week1){
+		case 1:wdat(0x4d);wdat(0x4f);wdat(0x4e);break;
+		case 2:wdat(0x54);wdat(0x55);wdat(0x45);break;
+		case 3:wdat(0x57);wdat(0x45);wdat(0x44);break;
+		case 4:wdat(0x54);wdat(0x48);wdat(0x55);break;
+		case 5:wdat(0x46);wdat(0x52);wdat(0x49);break;
+		case 6:wdat(0x53);wdat(0x41);wdat(0x54);break;
+		case 7:wdat(0x53);wdat(0x55);wdat(0x4e);break;
+		default:break;
 	}
-	
-	if(mode == 1){					//调节时间
-		TR0  = 0;					//暂停计数
-		if(key_min == 0){
-			shortdelay(50);
-			if(key_min == 0){		//去抖
-				i+= 3;				//光标位置
-				k++;				//换行变量
-				if(k >= 3 && k < 6) {
-					i = 0;
-					i = i + 3*m; 
-					j = 0x40;
-					m++;
-				}
-				if(k >= 6){
-					i = 0;
-					j = 0;
-					k = 0;
-					m = 0;
-				}
-				while(!key_min) {;}
+}
+
+void day_jud(){									//日期处理(秒、分、时、日、月进位)
+	if(second > 59){
+		second = 0;
+		if(++minute > 59){
+			minute = 0;
+			if(++hour > 23){
+				hour = 0;
+				if(++week >= 8)	week = 1;
+				day++;
 			}
 		}
+	}
+	
+	if(minute > 59){
+		minute = 0;
+		if(++hour > 23){
+			hour = 0;
+			if(++week > 7)	week = 1;
+			day++;
+		}
+	}
+	
+	if(hour > 23){
+		hour = 0;
+		if(++week > 7)	week = 1;
+		day++;
+	}
+	
+	if(day > 31 && (month == 1 || month == 3 || month == 5 || month == 7 || month == 8 || month == 10 || month == 12)){
+		day = 1;
+		month++;
+		if(month >= 12){
+			month = 1;
+			year++;
+		}
+	}
+	else if(day > 30 && (month == 4 || month == 6 || month == 9 || month == 11)){
+		day = 1;
+		month++;
+	}
+	else if(day > 29 && month == 2 && ((year%4 == 0 && year%100 != 0) || year%400 == 0)){
+		day = 1;
+		month++;
+	}
+	else if(day > 28 && month == 2){
+		day = 1;
+		month++;
+	}
+}
 
-		lcd_wcom(0x87+i+j);			//光标闪烁
-		lcd_wcom(0x0E);
-		shortdelay(100);
-		lcd_wcom(0x87+i+j);			//光标闪烁
-		lcd_wcom(0x0C);
-		shortdelay(150);
-
-
-		timeshow(6,hour);
-		timeshow(9,minute);
-		timeshow(0x0C,second);
-		dateshow(6,year);
-		dateshow(9,month);
-		dateshow(0x0C,day);
+void display(){										//显示函数
+	if(!f_mode){									//时间显示模式
+		yearshow(2,year);
+		dateshow(7,month);
+		dateshow(0x0a,day);
+		weekshow(0x0d,week);
 		
-		if(key_add == 0){
-			shortdelay(50);
-			if(key_add == 0){
-				if(k == 0){
-					hour++;
-					if(hour == 24){
-						hour = 0;
-						day++;
-						if(day == 32 && (month == 1 || month == 3 || month == 5 || month == 7 || month == 8 || month == 10 || month ==12)){
-							day = 1;
-							month++;
-							if(month > 12){
-								month = 1;
-								year++;
-							}
-						}
-						if(day == 31 && (month == 4 || month == 6 || month == 9 || month == 11)){
-							day = 1;
-							month++;
-						}
-						if(day == 29 && month ==2 && (year%4 != 0)){
-							day = 1;
-							month++;
-						}
-						if(day == 29 && month ==2 && year%100 == 0 && year%400 != 0){
-							day = 1;
-							month++;
-						}
-						if(day == 30 && month ==2 && ((year%100 == 0 && year%400 == 0)|| (year%100 != 0 && year%4 == 0))){
-							day = 1;
-							month++;
-						}
-					}
-				}
-				
-				if(k == 1){
-					minute++;
-					if(minute == 60){
-						minute = 0;
-						hour++;
-						if(hour == 24){
-							hour = 0;
-							day++;
-							if(day == 32 && (month == 1 || month == 3 || month == 5 || month == 7 || month == 8 || month == 10 || month ==12)){
-								day = 1;
-								month++;
-								if(month > 12){
-									month = 1;
-									year++;
-								}
-							}
-							if(day == 31 && (month == 4 || month == 6 || month == 9 || month == 11)){
-								day = 1;
-								month++;
-							}
-							if(day == 29 && month ==2 && (year%4 != 0)){
-								day = 1;
-								month++;
-							}
-							if(day == 29 && month ==2 && year%100 == 0 && year%400 != 0){
-								day = 1;
-								month++;
-							}
-							if(day == 30 && month ==2 && ((year%100 == 0 && year%400 == 0)|| (year%100 != 0 && year%4 == 0))){
-								day = 1;
-								month++;
-							}
-						}
-					}
-				}
-				
-				if(k == 2){
-					second++;
-					if(second == 60){
-						second = 0;
-						minute++;
-						if(minute == 60){
-							minute = 0;
-							hour++;
-							if(hour == 24){
-								hour = 0;
-								day++;
-								if(day == 32 && (month == 1 || month == 3 || month == 5 || month == 7 || month == 8 || month == 10 || month ==12)){
-									day = 1;
-									month++;
-									if(month > 12){
-										month = 1;
-										year++;
-									}
-								}
-								if(day == 31 && (month == 4 || month == 6 || month == 9 || month == 11)){
-									day = 1;
-									month++;
-								}
-								if(day == 29 && month ==2 && (year%4 != 0)){
-									day = 1;
-									month++;
-								}
-								if(day == 29 && month ==2 && year%100 == 0 && year%400 != 0){
-									day = 1;
-									month++;
-								}
-								if(day == 30 && month ==2 && ((year%100 == 0 && year%400 == 0)|| (year%100 != 0 && year%4 == 0))){
-									day = 1;
-									month++;
-								}
-							}
-						}
-					}
-				}
-				
-				if(k == 3){
-					year++;
-				}
-				
-				if(k == 4){
-					month++;
-					if(month > 12) {
-						year++;
-						month = 1;
-					}
-				}
-				
-				if(k == 5){
-					day++;
-					if(day == 32 && (month == 1 || month == 3 || month == 5 || month == 7 || month == 8 || month == 10 || month ==12)){
-						day = 1;
-						month++;
-						if(month > 12){
-							month = 1;
-							year++;
-						}
-					}
-					if(day == 31 && (month == 4 || month == 6 || month == 9 || month == 11)){
-						day = 1;
-						month++;
-					}
-					if(day == 29 && month ==2 && (year%4 != 0)){
-						day = 1;
-						month++;
-					}
-					if(day == 29 && month ==2 && year%100 == 0 && year%400 != 0){
-						day = 1;
-						month++;
-					}
-					if(day == 30 && month ==2 && ((year%100 == 0 && year%400 == 0)|| (year%100 != 0 && year%4 == 0))){
-						day = 1;
-						month++;
-					}
-				}
-				while(!key_add);
+		timeshow(2,hour);
+		timeshow(5,minute);
+		timeshow(0x08,second);
+		temp_read();								//读取温度
+		temp_display(0x0b,tvalue);					//温度显示
+	}
+	else{											//时间调节模式
+		wcom(0x80+0x40+0x0d);
+		wdat(0x53);									//"S"
+		wdat(0x45);									//"E"
+		wdat(0x54);									//"T"
+
+		if(f_twinkle && !f_pressing){				//闪烁标志位,0.4秒取反一次,为1则相应位置显示空白
+			if(cursor == 0) {						//按压标志位,按键按下时为1,不闪烁
+				wcom(0x82);							//要显示空白的位置
+				wdat(0x01);							//4位最下面一行亮,类似光标,伪光标
+				wdat(0x01);
+				wdat(0x01);
+				wdat(0x01);
+			}
+			if(cursor == 1) {
+				wcom(0x87);							//要显示空白的位置
+				wdat(0x01);							//2位空白(实现闪烁效果)
+				wdat(0x01);
+			}
+			if(cursor == 2) {
+				wcom(0x8a);
+				wdat(0x01);
+				wdat(0x01);
+			}
+			if(cursor == 3) {
+				wcom(0x8d);
+				wdat(0x01);
+				wdat(0x01);
+				wdat(0x01);
+			}
+			if(cursor == 4) {
+				wcom(0x80+0x42);
+				wdat(0x01);
+				wdat(0x01);
+			}
+			if(cursor == 5) {
+				wcom(0x80+0x45);
+				wdat(0x01);
+				wdat(0x01);
+			}
+			if(cursor == 6) {
+				wcom(0x80+0x48);
+				wdat(0x01);
+				wdat(0x01);
 			}
 		}
-		
-		if(key_sub == 0){
-			shortdelay(50);
-			if(key_sub == 0){
-				if(k == 0 && hour > 0){
-					hour--;
-				}	
-				if(k == 1 && minute > 0){
-					minute--;
-				}
-				if(k == 2 && second > 0){
-					second--;
-				}
-				if(k == 3 && year > 0){
-					year--;
-				}
-				if(k == 4 && month > 1){
-					month--;
-				}
-				if(k == 5 && day > 1){
-					day--;
-				}
-				while(!key_sub);
+		else {										//正常显示
+			yearshow(2,year);
+			dateshow(7,month);
+			dateshow(0x0a,day);
+			weekshow(0x0d,week);
+			timeshow(2,hour);
+			timeshow(5,minute);
+			timeshow(0x08,second);
+		}
+	}
+}
+
+void keyscan(){										//按键扫描
+	static uint8 key_state;
+	
+	switch(key_state){
+		case key_state0:							//未按下
+			if(!key1 || !key2 || !key3 || !key4){
+				key_state = key_state1;
+			}
+		break;
+		case key_state1:							//有键按下
+			f_pressing = 1;
+			if(!key1){
+				f_set = ~f_set;						//秒走时停止
+				f_mode = ~f_mode;					//模式切换
+				key_value = 1;
+				key_state = key_state2;
+			}
+			else if(!key2){
+				key_value = 2;
+				key_state = key_state2;
+			}
+			else if(!key3){
+				key_value = 3;
+				key_state = key_state2;
+			}
+			else if(!key4){
+				key_value = 4;
+				key_state = key_state2;
+			}
+			else{
+				key_state = key_state0;
+				f_pressing = 0;						//如果不清零,假如按键是无效按下,调节模式时就会停止闪烁
+			}
+		break;
+		case key_state2:							//松开按键
+			if(key1 && key2 && key3 && key4){
+				f_pressing = 0;
+				key_state = key_state0;
+			}
+		break;
+	}
+}
+
+void key_disposal(){								//键值处理
+	if(!f_pressing){								//松开按键才处理
+		if(key_value == 1){
+			key_value = 0;
+			cursor = 0;								//光标位置清零
+			lcd_init();								//清屏
+		}
+		else if(key_value == 2){
+			key_value = 0;
+			cursor++;								//光标+
+			if(cursor > 6){
+				cursor = 0;
+			}
+		}
+		else if((key_value == 3) && f_mode){		//光标所处位置值+
+			key_value = 0;
+			if(cursor == 0){
+				year++;
+			}
+			else if (cursor == 1){
+				if(++month > 12) month = 1;
+			}
+			else if(cursor == 2){
+				if(++day > 31) day = 1;
+			}
+			else if(cursor == 3){
+				if(++week > 7) week = 1;
+			}
+			else if(cursor == 4){
+				if(++hour > 23) hour = 0;
+			}
+			else if(cursor == 5){
+				if(++minute > 59) minute = 0;
+			}
+			else if(cursor == 6){
+				if(++second > 59) second = 0;
+			}
+		}
+		else if((key_value == 4) && f_mode){		//光标所处位置值-
+			key_value = 0;
+			if(cursor == 0 && year > 0){
+				year--;
+			}
+			else if (cursor == 1 && month > 1){
+				month--;
+			}
+			else if(cursor == 2 && day > 1){
+				day--;
+			}
+			else if(cursor == 3 && week > 1){
+				week--;
+			}
+			else if(cursor == 4 && hour > 0){
+				hour--;
+			}
+			else if(cursor == 5 && minute > 0){
+				minute--;
+			}
+			else if(cursor == 6 && second > 0){
+				second--;
 			}
 		}
 	}
 }
 
-void lcdinitshow(void){
-	lcd_init();
-	
-	lcd_wcom(0x81);				//T
-	lcd_wdat(0x54);
-	lcd_wcom(0x82);				//I
-	lcd_wdat(0x49);
-	lcd_wcom(0x83);				//M
-	lcd_wdat(0x4D);
-	lcd_wcom(0x84);				//E
-	lcd_wdat(0x45);
-	
-	lcd_wcom(0x85);				//显示冒号 在第5位
-	lcd_wdat(0x3A);				//显示冒号
-	
-	lcd_wcom(0x88);				//显示冒号	在第8位
-	lcd_wdat(0x3A);				//显示冒号
-	
-	lcd_wcom(0x8B);				//显示冒号	在第11位
-	lcd_wdat(0x3A);				//显示冒号
-	
-	lcd_wcom(0xC1);				//D
-	lcd_wdat(0x44);
-	lcd_wcom(0xC2);				//A
-	lcd_wdat(0x41);
-	lcd_wcom(0xC3);				//T
-	lcd_wdat(0x54);
-	lcd_wcom(0xC4);				//E
-	lcd_wdat(0x45);
-	
-	lcd_wcom(0xC5);				//显示冒号 在第二排第5位
-	lcd_wdat(0x3A);				//显示冒号
-	
-	lcd_wcom(0xC8);				//显示冒号	在第二排第8位
-	lcd_wdat(0x2F);				//显示冒号
-	
-	lcd_wcom(0xCB);				//显示冒号	在第二排第11位
-	lcd_wdat(0x2F);				//显示冒号
+uint8 byte_read(){									//ds18b20 读字节
+	uint8 i,j,dat;
+	for(i = 0; i < 8 ; i++){
+		dq = 0;
+		_nop_();
+		dq = 1;
+		_nop_();
+		j = dq;
+		delayus(10);
+		dq = 1;
+		_nop_();
+		dat = (j << 7 | dat >> 1);
+	}
+	return(dat);
+}
+
+void byte_write(uint8 data1){						//ds18b20 写字节
+	uint8 i;
+	for(i = 0; i < 8 ; i++){
+		dq = 0;
+		_nop_();
+		dq = data1&0x01;
+		delayus(10);
+		dq = 1;
+		_nop_();
+		data1 >>= 1;
+	}
+}
+
+void temp_read(){									//读温度
+	float data1;
+	uint8 i,j;
+	ds18b20_init();
+	byte_write(0xcc);								//向DS18B20发跳过读ROM命令
+	byte_write(0x44);								//启动DS18B20进行温度转换命令，转换结果存入内部RAM
+	delayus(80);
+	ds18b20_init();
+	byte_write(0xcc);								//向DS18B20发跳过读ROM命令
+	byte_write(0xbe);								//读取温度寄存器等（共可读9个寄存器） 前两个就是温度
+	delayus(80);
+	i = byte_read();								//内部RAM 低位
+	j = byte_read();								//内部RAM 高位
+	data1 = (j*256 + i) * 6.25;						//取出温度值
+	tvalue = (uint16)data1;							//强制转换
+}
+
+void temp_display(uint8 position,uint16 tvalue1){	//温度显示
+	uint8 i,j,m;
+	i = tvalue1/1000;
+	j = tvalue1%1000/100;
+	m = tvalue1%100/10;								//取出十位 个位 十分位
+	wcom(0x80 + 0x40 + position);
+	wdat(0x30 + i);
+	wdat(0x30 + j);
+	wdat(0x2e);										//"."
+	wdat(0x30 + m);
+	wdat(0x00);										//自编字符
 }
 
 void main(){
-	uint8 i = 0;
-	init_int();
-	lcdinitshow();
-	while(1) {
-		keyscan();
+	uint8 i;
+	wcom(0x40);
+	for(i = 0; i < 8 ; i++){
+		wdat(table1[i]);							//写入自编字符
+	}
+	wcom(0x48);
+	for(i = 0; i < 8 ; i++){
+		wdat(table2[i]);							//写入自编字符
+	}
+	
+	timer_init();
+	lcd_init();
+	while(1){
+		// if(++temp > 2){
+			// temp = 0;
+		// }
+		// switch(temp){
+			// case 0:day_jud();break;
+			// case 1:key_disposal();break;
+			// case 2:display();break;
+		// }
+		day_jud();
+		key_disposal();
+		display();
 	}
 }
